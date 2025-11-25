@@ -39,6 +39,26 @@ def insert_nilai(nama: str, biologi: int, fisika: int, inggris: int, prediksi: s
     return rowid
 
 
+def update_nilai(id_data, nama, biologi, fisika, inggris, prediksi):
+    con = koneksi()
+    cur = con.cursor()
+    cur.execute("""
+        UPDATE nilai_siswa
+        SET nama_siswa=?, biologi=?, fisika=?, inggris=?, prediksi_fakultas=?
+        WHERE id=?
+    """, (nama, biologi, fisika, inggris, prediksi, id_data))
+    con.commit()
+    con.close()
+
+
+def delete_nilai(id_data):
+    con = koneksi()
+    cur = con.cursor()
+    cur.execute("DELETE FROM nilai_siswa WHERE id=?", (id_data,))
+    con.commit()
+    con.close()
+
+
 def read_nilai():
     con = koneksi()
     cur = con.cursor()
@@ -108,6 +128,19 @@ class AplikasiPrediksi(tk.Tk):
             font=("Arial", 10, "bold"), command=self.refresh_data
         )
         self.btn_refresh.pack(side="left", padx=5)
+
+        self.btn_update = tk.Button(
+            btn_frame, text="Update Data", width=15, bg="#FF9800", fg="white",
+            font=("Arial", 10, "bold"), command=self.update_data
+        )
+        self.btn_update.pack(side="left", padx=5)
+
+        self.btn_delete = tk.Button(
+            btn_frame, text="Delete Data", width=15, bg="#F44336", fg="white",
+            font=("Arial", 10, "bold"), command=self.delete_data
+        )
+        self.btn_delete.pack(side="left", padx=5)
+
 
         # Label untuk hasil prediksi
         self.lbl_hasil = tk.Label(
@@ -197,6 +230,51 @@ class AplikasiPrediksi(tk.Tk):
             self.clear_inputs()
         except Exception as e:
             msg.showerror("Database Error", f"Gagal menyimpan data:\n{str(e)}")
+
+    def update_data(self):
+        selected = self.tree.focus()
+        if not selected:
+            msg.showwarning("Peringatan", "Pilih data yang akan diupdate!")
+            return
+
+        values = self.tree.item(selected, "values")
+        id_data = values[0]
+
+        val = self.validate_inputs()
+        if not val:
+            return
+
+        nama, biologi, fisika, inggris = val
+        prediksi = self.prediksi_fakultas(biologi, fisika, inggris)
+
+        try:
+            update_nilai(id_data, nama, biologi, fisika, inggris, prediksi)
+            msg.showinfo("Sukses", "Data berhasil diupdate!")
+            self.refresh_data()
+            self.clear_inputs()
+        except Exception as e:
+            msg.showerror("Database Error", f"Gagal update data:\n{str(e)}")
+
+    def delete_data(self):
+        selected = self.tree.focus()
+        if not selected:
+            msg.showwarning("Peringatan", "Pilih data yang akan dihapus!")
+            return
+
+        values = self.tree.item(selected, "values")
+        id_data = values[0]
+
+        konfirmasi = msg.askyesno("Konfirmasi Hapus", "Yakin ingin menghapus data ini?")
+        if not konfirmasi:
+            return
+
+        try:
+            delete_nilai(id_data)
+            msg.showinfo("Sukses", "Data berhasil dihapus!")
+            self.refresh_data()
+        except Exception as e:
+            msg.showerror("Database Error", f"Gagal menghapus data:\n{str(e)}")
+
 
     def refresh_data(self):
         # Hapus data lama di treeview
